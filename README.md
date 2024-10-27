@@ -1,8 +1,6 @@
 # stm32-oi-io
-This project can be a starting point to your own STM32 project. It contains facilities that make software
-development easier and ensures compatibility with the esp8266 web interface.
-
-It provides
+This is some firmware for the EVBMW IO Board, desgined to exist within the Open Inverter ecosystem. It can be configured to recieve the on off commands on any standard can id. It will also broadcast the digial inputs on a configured standard can ID. 
+The node ID can be set to use the CAN based standard Open Inverter web UI.
 
 
 # OTA (over the air upgrade)

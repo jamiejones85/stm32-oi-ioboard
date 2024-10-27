@@ -44,6 +44,23 @@ static Stm32Scheduler* scheduler;
 static CanHardware* can;
 static CanMap* canMap;
 
+static void broadcastInputs(void) {
+   uint8_t bytes[8];
+
+   bytes[0] = 0x00;
+   bytes[1] = 0x00;
+   bytes[2] = 0x00;
+   bytes[3] = 0x00;
+   bytes[4] = 0x00;
+   bytes[5] = 0x00;
+   bytes[6] = 0x00;
+
+   bytes[7] = 0x0 & DigIo::gp_in.Get() < 3 & DigIo::gp2_in.Get() < 2 & DigIo::notpark_in.Get() < 1 && DigIo::notpark_in.Get();
+
+   can->Send(Param::GetInt(Param::inputid), (uint32_t*)bytes, 8);
+
+}
+
 //sample 100ms task
 static void Ms100Task(void)
 {
@@ -63,8 +80,10 @@ static void Ms100Task(void)
    Param::SetFloat(Param::cpuload, cpuLoad / 10);
 
    //If we chose to send CAN messages every 100 ms, do this here.
-   if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS)
+   if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS) {
       canMap->SendAll();
+      broadcastInputs();
+   }
 }
 
 //sample 10 ms task
@@ -74,8 +93,10 @@ static void Ms10Task(void)
    ErrorMessage::SetTime(rtc_get_counter_val());
 
    //If we chose to send CAN messages every 10 ms, do this here.
-   if (Param::GetInt(Param::canperiod) == CAN_PERIOD_10MS)
+   if (Param::GetInt(Param::canperiod) == CAN_PERIOD_10MS) {
       canMap->SendAll();
+      broadcastInputs();
+   }
 }
 
 /** This function is called when the user changes a parameter */
@@ -104,18 +125,20 @@ static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is wh
 {
    dlc = dlc;
    uint8_t* bytes = (uint8_t*)data;
+
    if (id == Param::GetInt(Param::outputid)) {
       bytes[7] & 0b00000001 ? DigIo::gp_out.Set() : DigIo::gp_out.Clear();
       bytes[7] & 0b00000010 ? DigIo::gp2_out.Set() : DigIo::gp2_out.Clear();
       bytes[7] & 0b00000100 ? DigIo::a_out.Set() : DigIo::a_out.Clear();
       bytes[7] & 0b00001000 ? DigIo::b_out.Set() : DigIo::b_out.Clear();
       bytes[7] & 0b00010000 ? DigIo::c_out.Set() : DigIo::c_out.Clear();
-      bytes[7] & 0b00100000 ? DigIo::notparkout.Set() : DigIo::notparkout.Clear();
-      bytes[7] & 0b01000000 ? DigIo::park_out.Set() : DigIo::park_out.Clear();
+      bytes[7] & 0b00100000 ? DigIo::d_out.Set() : DigIo::d_out.Clear();
+      bytes[7] & 0b01000000 ? DigIo::e_out.Set() : DigIo::e_out.Clear();
       bytes[7] & 0b10000000 ? DigIo::parkrel_out.Set() : DigIo::parkrel_out.Clear();
-
-      bytes[6] & 0b00000001 ? DigIo::line_out.Set() : DigIo::line_out.Clear();
-      bytes[6] & 0b00000010 ? DigIo::tcc_out.Set() : DigIo::tcc_out.Clear();
+      
+      bytes[6] & 0b00000001 ? DigIo::parkhl_out.Set() : DigIo::parkhl_out.Clear();
+      bytes[6] & 0b00000010 ? DigIo::line_out.Set() : DigIo::line_out.Clear();
+      bytes[6] & 0b00000100 ? DigIo::tcc_out.Set() : DigIo::tcc_out.Clear();
    }
 
    return false;
