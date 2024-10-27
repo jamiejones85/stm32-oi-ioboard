@@ -59,52 +59,6 @@ void clock_setup(void)
    rcc_periph_clock_enable(RCC_CAN1); //CAN
 }
 
-/* Some pins should never be left floating at any time
- * Since the bootloader delays firmware startup by a few 100ms
- * We need to tell it which pins we want to initialize right
- * after startup
- */
-void write_bootloader_pininit()
-{
-   uint32_t flashSize = desig_get_flash_size();
-   uint32_t pindefAddr = FLASH_BASE + flashSize * 1024 - PINDEF_BLKNUM * PINDEF_BLKSIZE;
-   const struct pincommands* flashCommands = (struct pincommands*)pindefAddr;
-
-   struct pincommands commands;
-
-   memset32((int*)&commands, 0, PINDEF_NUMWORDS);
-
-   //!!! Customize this to match your project !!!
-   //Here we specify that PC13 be initialized to ON
-   //AND PB1 AND PB2 be initialized to OFF
-   commands.pindef[0].port = GPIOC;
-   commands.pindef[0].pin = GPIO13;
-   commands.pindef[0].inout = PIN_OUT;
-   commands.pindef[0].level = 1;
-   commands.pindef[1].port = GPIOB;
-   commands.pindef[1].pin = GPIO1 | GPIO2;
-   commands.pindef[1].inout = PIN_OUT;
-   commands.pindef[1].level = 0;
-
-   crc_reset();
-   uint32_t crc = crc_calculate_block(((uint32_t*)&commands), PINDEF_NUMWORDS);
-   commands.crc = crc;
-
-   if (commands.crc != flashCommands->crc)
-   {
-      flash_unlock();
-      flash_erase_page(pindefAddr);
-
-      //Write flash including crc, therefor <=
-      for (uint32_t idx = 0; idx <= PINDEF_NUMWORDS; idx++)
-      {
-         uint32_t* pData = ((uint32_t*)&commands) + idx;
-         flash_program_word(pindefAddr + idx * sizeof(uint32_t), *pData);
-      }
-      flash_lock();
-   }
-}
-
 /**
 * Enable Timer refresh and break interrupts
 */
@@ -128,36 +82,8 @@ void rtc_setup()
 */
 void tim_setup()
 {
-   /*** Setup over/undercurrent and PWM output timer */
-   timer_disable_counter(OVER_CUR_TIMER);
-   //edge aligned PWM
-   timer_set_alignment(OVER_CUR_TIMER, TIM_CR1_CMS_EDGE);
-   timer_enable_preload(OVER_CUR_TIMER);
-   /* PWM mode 1 and preload enable */
-   timer_set_oc_mode(OVER_CUR_TIMER, TIM_OC1, TIM_OCM_PWM1);
-   timer_set_oc_mode(OVER_CUR_TIMER, TIM_OC2, TIM_OCM_PWM1);
-   timer_set_oc_mode(OVER_CUR_TIMER, TIM_OC3, TIM_OCM_PWM1);
-   timer_set_oc_mode(OVER_CUR_TIMER, TIM_OC4, TIM_OCM_PWM1);
-   timer_enable_oc_preload(OVER_CUR_TIMER, TIM_OC1);
-   timer_enable_oc_preload(OVER_CUR_TIMER, TIM_OC2);
-   timer_enable_oc_preload(OVER_CUR_TIMER, TIM_OC3);
-   timer_enable_oc_preload(OVER_CUR_TIMER, TIM_OC4);
-
-   timer_set_oc_polarity_high(OVER_CUR_TIMER, TIM_OC1);
-   timer_set_oc_polarity_high(OVER_CUR_TIMER, TIM_OC2);
-   timer_set_oc_polarity_high(OVER_CUR_TIMER, TIM_OC3);
-   timer_set_oc_polarity_high(OVER_CUR_TIMER, TIM_OC4);
-   timer_enable_oc_output(OVER_CUR_TIMER, TIM_OC1);
-   timer_enable_oc_output(OVER_CUR_TIMER, TIM_OC2);
-   timer_enable_oc_output(OVER_CUR_TIMER, TIM_OC3);
-   timer_enable_oc_output(OVER_CUR_TIMER, TIM_OC4);
-   timer_generate_event(OVER_CUR_TIMER, TIM_EGR_UG);
-   timer_set_prescaler(OVER_CUR_TIMER, 0);
-   /* PWM frequency */
-   timer_set_period(OVER_CUR_TIMER, OCURMAX);
-   timer_enable_counter(OVER_CUR_TIMER);
 
    /** setup gpio */
-   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO7 | GPIO8 | GPIO9);
+   //gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO7 | GPIO8 | GPIO9);
 }
 

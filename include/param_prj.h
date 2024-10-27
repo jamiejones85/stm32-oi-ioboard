@@ -52,11 +52,12 @@
 #define PARAM_LIST \
     PARAM_ENTRY(CAT_COMM,    canspeed,    CANSPEEDS, 0,      4,      2,      1   ) \
     PARAM_ENTRY(CAT_COMM,    canperiod,   CANPERIODS,0,      1,      0,      2   ) \
-    PARAM_ENTRY(CAT_TEST,    testparam,   "Hz",      -100,   1000,   0,      0   ) \
+    PARAM_ENTRY(CAT_COMM,    outputid,    "",        1,   2047,      0,      3   ) \
+    PARAM_ENTRY(CAT_COMM,    inputid,     "",        1,   2047,      0,      4   ) \
+    PARAM_ENTRY(CAT_COMM,    nodeid,      "",        1,   2047,      46,     5   ) \
     VALUE_ENTRY(opmode,      OPMODES, 2000 ) \
     VALUE_ENTRY(version,     VERSTR,  2001 ) \
     VALUE_ENTRY(lasterr,     errorListString,  2002 ) \
-    VALUE_ENTRY(testain,     "dig",   2003 ) \
     VALUE_ENTRY(cpuload,     "%",     2004 )
 
 
@@ -64,7 +65,6 @@
 #define OPMODES      "0=Off, 1=Run"
 #define CANSPEEDS    "0=125k, 1=250k, 2=500k, 3=800k, 4=1M"
 #define CANPERIODS   "0=100ms, 1=10ms"
-#define CAT_TEST     "Testing"
 #define CAT_COMM     "Communication"
 
 #define VERSTR STRINGIFY(4=VER-name)

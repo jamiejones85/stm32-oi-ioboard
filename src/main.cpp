@@ -73,16 +73,6 @@ static void Ms10Task(void)
    //Set timestamp of error message
    ErrorMessage::SetTime(rtc_get_counter_val());
 
-   if (DigIo::test_in.Get())
-   {
-      //Post a test error message when our test input is high
-      ErrorMessage::Post(ERR_TESTERROR);
-   }
-
-   //AnaIn::<name>.Get() returns the filtered ADC value
-   //Param::SetInt() sets an integer value.
-   Param::SetInt(Param::testain, AnaIn::test.Get());
-
    //If we chose to send CAN messages every 10 ms, do this here.
    if (Param::GetInt(Param::canperiod) == CAN_PERIOD_10MS)
       canMap->SendAll();
@@ -93,7 +83,11 @@ void Param::Change(Param::PARAM_NUM paramNum)
 {
    switch (paramNum)
    {
-   default:
+      case Param::outputid:
+        can->ClearUserMessages();
+        break;
+      
+      default:
       //Handle general parameter changes here. Add paramNum labels for handling specific parameters
       break;
    }
@@ -106,7 +100,38 @@ extern "C" void tim2_isr(void)
    scheduler->Run();
 }
 
+static bool CanCallback(uint32_t id, uint32_t data[2], uint8_t dlc) //This is where we go when a defined CAN message is received.
+{
+   dlc = dlc;
+   uint8_t* bytes = (uint8_t*)data;
+   if (id == Param::GetInt(Param::outputid)) {
+      bytes[7] & 0b00000001 ? DigIo::gp_out.Set() : DigIo::gp_out.Clear();
+      bytes[7] & 0b00000010 ? DigIo::gp2_out.Set() : DigIo::gp2_out.Clear();
+      bytes[7] & 0b00000100 ? DigIo::a_out.Set() : DigIo::a_out.Clear();
+      bytes[7] & 0b00001000 ? DigIo::b_out.Set() : DigIo::b_out.Clear();
+      bytes[7] & 0b00010000 ? DigIo::c_out.Set() : DigIo::c_out.Clear();
+      bytes[7] & 0b00100000 ? DigIo::notparkout.Set() : DigIo::notparkout.Clear();
+      bytes[7] & 0b01000000 ? DigIo::park_out.Set() : DigIo::park_out.Clear();
+      bytes[7] & 0b10000000 ? DigIo::parkrel_out.Set() : DigIo::parkrel_out.Clear();
+
+      bytes[6] & 0b00000001 ? DigIo::line_out.Set() : DigIo::line_out.Clear();
+      bytes[6] & 0b00000010 ? DigIo::tcc_out.Set() : DigIo::tcc_out.Clear();
+   }
+
+   return false;
+}
+
+//Whenever the user clears mapped can messages or changes the
+//CAN interface of a device, this will be called by the CanHardware module
+static void SetCanFilters()
+{
+   can->RegisterUserMessage(0x601); //CanSDO
+   can->RegisterUserMessage(Param::GetInt(Param::outputid));
+
+}
+
 extern "C" int main(void)
+
 {
    extern const TERM_CMD termCmds[];
 
@@ -115,7 +140,6 @@ extern "C" int main(void)
    ANA_IN_CONFIGURE(ANA_IN_LIST);
    DIG_IO_CONFIGURE(DIG_IO_LIST);
    AnaIn::Start(); //Starts background ADC conversion via DMA
-   write_bootloader_pininit(); //Instructs boot loader to initialize certain pins
 
    tim_setup(); //Sample init of a timer
    nvic_setup(); //Set up some interrupts
@@ -125,12 +149,16 @@ extern "C" int main(void)
    scheduler = &s;
    //Initialize CAN1, including interrupts. Clock must be enabled in clock_setup()
    Stm32Can c(CAN1, (CanHardware::baudrates)Param::GetInt(Param::canspeed));
+   FunctionPointerCallback cb(CanCallback, SetCanFilters);
+
    CanMap cm(&c);
    CanSdo sdo(&c, &cm);
-   sdo.SetNodeId(33); //Set node ID for SDO access e.g. by wifi module
+   sdo.SetNodeId(Param::GetInt(Param::nodeid)); //Set node ID for SDO access e.g. by wifi module
    //store a pointer for easier access
    can = &c;
    canMap = &cm;
+   
+   c.AddCallback(&cb);
 
    //This is all we need to do to set up a terminal on USART3
    Terminal t(USART3, termCmds);
@@ -148,6 +176,8 @@ extern "C" int main(void)
    Param::SetInt(Param::version, 4);
    Param::Change(Param::PARAM_LAST); //Call callback one for general parameter propagation
 
+   //
+   can->ClearUserMessages();
    //Now all our main() does is running the terminal
    //All other processing takes place in the scheduler or other interrupt service routines
    //The terminal has lowest priority, so even loading it down heavily will not disturb
@@ -165,4 +195,6 @@ extern "C" int main(void)
 
    return 0;
 }
+
+extern "C" void __cxa_pure_virtual() { while (1); }
 

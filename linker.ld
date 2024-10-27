@@ -18,11 +18,12 @@
  */
 
 /* Linker script for Olimex STM32-H103 (STM32F103RBT6, 128K flash, 20K RAM). */
+/* Linker script for Olimex STM32-H103 (STM32F103C8, 64K flash, 20K RAM). */
 
 /* Define memory regions. */
 MEMORY
 {
-	rom (rx)    : ORIGIN = 0x08001000, LENGTH = 120K
+	rom (rx)    : ORIGIN = 0x08001000, LENGTH = 56K
 	ram (rwx)   : ORIGIN = 0x20000000, LENGTH = 20K
 }
 
