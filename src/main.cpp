@@ -54,8 +54,7 @@ static void broadcastInputs(void) {
    bytes[4] = 0x00;
    bytes[5] = 0x00;
    bytes[6] = 0x00;
-
-   bytes[7] = 0x0 & DigIo::gp_in.Get() < 3 & DigIo::gp2_in.Get() < 2 & DigIo::notpark_in.Get() < 1 && DigIo::notpark_in.Get();
+   bytes[7] = 0x0 | DigIo::gp_in.Get() << 3 | DigIo::gp2_in.Get() << 2 | DigIo::notpark_in.Get() << 1 | DigIo::notpark_in.Get();
 
    can->Send(Param::GetInt(Param::inputid), (uint32_t*)bytes, 8);
 
